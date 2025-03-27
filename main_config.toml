@@ -17,7 +17,7 @@ msgDB-url = "sqlite+aiosqlite:///database/message.db"
 keyvalDB-url = "sqlite+aiosqlite:///database/keyval.db"
 
 # 管理员设置
-admins = ["admin-wxid", "admin-wxid"]  # 管理员的wxid列表，可从消息日志中获取
+admins = ["wxid_n643w6uwtl6f12"]  # 管理员的wxid列表，可从消息日志中获取
 disabled-plugins = ["ExamplePlugin", "TencentLke", "DailyBot"]   # 禁用的插件列表，不需要的插件名称填在这里
 timezone = "Asia/Shanghai"             # 时区设置，中国用户使用 Asia/Shanghai
 
@@ -30,24 +30,14 @@ ignore-mode = "None"            # 消息处理模式：
 # "Whitelist" - 仅处理白名单消息
 # "Blacklist" - 屏蔽黑名单消息
 
-whitelist = [# 白名单列表
-    "wxid_1", # 个人用户微信ID
-    "wxid_2",
-    "111@chatroom", # 群聊ID
-    "222@chatroom"
-]
+whitelist = ["wxid_n643w6uwtl6f12"]
 
-blacklist = [# 黑名单列表
-    "wxid_3", # 个人用户微信ID
-    "wxid_4",
-    "333@chatroom", # 群聊ID
-    "444@chatroom"
-]
+blacklist = []
 
 [WebUI]
-admin-username = "admin" # 管理员账号
-admin-password = "admin123" # 管理员密码（注意安全风险！）
-session-timeout = 30 # 会话超时时间（分钟）
+admin-username = "moon" # 管理员账号
+admin-password = "Moon579." # 管理员密码（注意安全风险！）
+session-timeout = 180 # 会话超时时间（分钟）
 
 flask-secret-key = "" # 如为空，会覆盖环境变量。如果覆盖环境变量也是空的则默认用"HenryXiaoYang_XYBotV2"
 debug = false

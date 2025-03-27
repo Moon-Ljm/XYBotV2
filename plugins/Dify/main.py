@@ -41,6 +41,7 @@ class Dify(PluginBase):
 
         self.commands = plugin_config["commands"]
         self.command_tip = plugin_config["command-tip"]
+        self.other_plugin_cmd = plugin_config["other-plugin-cmd"]
 
         self.price = plugin_config["price"]
         self.admin_ignore = plugin_config["admin_ignore"]
@@ -57,7 +58,17 @@ class Dify(PluginBase):
 
         command = str(message["Content"]).strip().split(" ")
 
-        if (not command or command[0] not in self.commands) and message["IsGroup"]:  # 不是指令，且是群聊
+        if command and command[0] in self.other_plugin_cmd:  # 指令来自其他插件
+            return
+
+        if len(command) == 1 and command[0] == "清空上下文":
+           self.db.save_llm_thread_id(message["FromWxid"], "", "dify")
+           await bot.send_at_message(message["FromWxid"], "\n✅清空上下文成功", [message["SenderWxid"]])
+           return
+
+        # if (not command or command[0] not in self.commands) and message["IsGroup"]:  # 不是指令，且是群聊
+        #     return
+        if (not command or command[0] not in self.commands):  # 不是指令，退出
             return
         elif len(command) == 1 and command[0] in self.commands:  # 只是指令，但没请求内容
             await bot.send_at_message(message["FromWxid"], "\n" + self.command_tip, [message["SenderWxid"]])
@@ -81,125 +92,131 @@ class Dify(PluginBase):
             return False
 
         if await self._check_point(bot, message):
-            await self.dify(bot, message, message["Content"])
+            try:
+                content = message["Content"]
+                if content.startswith("@") and len(message["Ats"]) == 1:
+                    content = content.split(" ")[1]
+                # logger.info(content)
+                await self.dify(bot, message, content)
+            except Exception as e:
+                logger.error(e)
+                await bot.send_at_message(message["FromWxid"], "\n解析消息内容发生异常，请联系管理员！", [message["SenderWxid"]])
 
         return False
 
-    @on_voice_message(priority=20)
-    async def handle_voice(self, bot: WechatAPIClient, message: dict):
-        if not self.enable:
-            return
+    # @on_voice_message(priority=20)
+    # async def handle_voice(self, bot: WechatAPIClient, message: dict):
+    #     if not self.enable:
+    #         return
 
-        if message["IsGroup"]:
-            return
+    #     if message["IsGroup"]:
+    #         return
 
-        if not self.api_key:
-            await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
-            return False
+    #     if not self.api_key:
+    #         await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
+    #         return False
 
-        if await self._check_point(bot, message):
-            upload_file_id = await self.upload_file(message["FromWxid"], message["Content"])
+    #     if await self._check_point(bot, message):
+    #         upload_file_id = await self.upload_file(message["FromWxid"], message["Content"])
 
-            files = [
-                {
-                    "type": "audio",
-                    "transfer_method": "local_file",
-                    "upload_file_id": upload_file_id
-                }
-            ]
+    #         files = [
+    #             {
+    #                 "type": "audio",
+    #                 "transfer_method": "local_file",
+    #                 "upload_file_id": upload_file_id
+    #             }
+    #         ]
 
-            await self.dify(bot, message, " \n", files)
+    #         await self.dify(bot, message, " \n", files)
 
-        return False
+    #     return False
 
-    @on_image_message(priority=20)
-    async def handle_image(self, bot: WechatAPIClient, message: dict):
-        if not self.enable:
-            return
+    # @on_image_message(priority=20)
+    # async def handle_image(self, bot: WechatAPIClient, message: dict):
+    #     if not self.enable:
+    #         return
 
-        if message["IsGroup"]:
-            return
+    #     if message["IsGroup"]:
+    #         return
 
-        if not self.api_key:
-            await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
-            return False
+    #     if not self.api_key:
+    #         await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
+    #         return False
 
-        if await self._check_point(bot, message):
-            upload_file_id = await self.upload_file(message["FromWxid"], bot.base64_to_byte(message["Content"]))
+    #     if await self._check_point(bot, message):
+    #         upload_file_id = await self.upload_file(message["FromWxid"], bot.base64_to_byte(message["Content"]))
 
-            files = [
-                {
-                    "type": "image",
-                    "transfer_method": "local_file",
-                    "upload_file_id": upload_file_id
-                }
-            ]
+    #         files = [
+    #             {
+    #                 "type": "image",
+    #                 "transfer_method": "local_file",
+    #                 "upload_file_id": upload_file_id
+    #             }
+    #         ]
 
-            await self.dify(bot, message, " \n", files)
+    #         await self.dify(bot, message, " \n", files)
 
-        return False
+    #     return False
 
-    @on_video_message(priority=20)
-    async def handle_video(self, bot: WechatAPIClient, message: dict):
-        if not self.enable:
-            return
+    # @on_video_message(priority=20)
+    # async def handle_video(self, bot: WechatAPIClient, message: dict):
+    #     if not self.enable:
+    #         return
 
-        if message["IsGroup"]:
-            return
+    #     if message["IsGroup"]:
+    #         return
 
-        if not self.api_key:
-            await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
-            return False
+    #     if not self.api_key:
+    #         await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
+    #         return False
 
-        if await self._check_point(bot, message):
-            upload_file_id = await self.upload_file(message["FromWxid"], bot.base64_to_byte(message["Video"]))
+    #     if await self._check_point(bot, message):
+    #         upload_file_id = await self.upload_file(message["FromWxid"], bot.base64_to_byte(message["Video"]))
 
-            files = [
-                {
-                    "type": "video",
-                    "transfer_method": "local_file",
-                    "upload_file_id": upload_file_id
-                }
-            ]
+    #         files = [
+    #             {
+    #                 "type": "video",
+    #                 "transfer_method": "local_file",
+    #                 "upload_file_id": upload_file_id
+    #             }
+    #         ]
 
-            await self.dify(bot, message, " \n", files)
+    #         await self.dify(bot, message, " \n", files)
 
-        return False
+    #     return False
 
-    @on_file_message(priority=20)
-    async def handle_file(self, bot: WechatAPIClient, message: dict):
-        if not self.enable:
-            return
+    # @on_file_message(priority=20)
+    # async def handle_file(self, bot: WechatAPIClient, message: dict):
+    #     if not self.enable:
+    #         return
 
-        if message["IsGroup"]:
-            return
+    #     if message["IsGroup"]:
+    #         return
 
-        if not self.api_key:
-            await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
-            return False
+    #     if not self.api_key:
+    #         await bot.send_at_message(message["FromWxid"], "\n你还没配置Dify API密钥！", [message["SenderWxid"]])
+    #         return False
 
-        if await self._check_point(bot, message):
-            upload_file_id = await self.upload_file(message["FromWxid"], message["Content"])
+    #     if await self._check_point(bot, message):
+    #         upload_file_id = await self.upload_file(message["FromWxid"], message["Content"])
 
-            files = [
-                {
-                    "type": "document",
-                    "transfer_method": "local_file",
-                    "upload_file_id": upload_file_id
-                }
-            ]
+    #         files = [
+    #             {
+    #                 "type": "document",
+    #                 "transfer_method": "local_file",
+    #                 "upload_file_id": upload_file_id
+    #             }
+    #         ]
 
-            await self.dify(bot, message, " \n", files)
+    #         await self.dify(bot, message, " \n", files)
 
-        return False
+    #     return False
 
     async def dify(self, bot: WechatAPIClient, message: dict, query: str, files=None):
         if files is None:
             files = []
-        conversation_id = self.db.get_llm_thread_id(message["FromWxid"],
-                                                    namespace="dify")
-        headers = {"Authorization": f"Bearer {self.api_key}",
-                   "Content-Type": "application/json"}
+        conversation_id = self.db.get_llm_thread_id(message["FromWxid"], namespace="dify")
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         payload = json.dumps({
             "inputs": {},
             "query": query,
